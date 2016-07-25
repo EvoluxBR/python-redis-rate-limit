@@ -12,7 +12,7 @@ INCREMENT_SCRIPT = b"""
     local current
     current = tonumber(redis.call("incr", KEYS[1]))
     if current == 1 then
-        redis.call("expire", KEYS[1], ARGS[1])
+        redis.call("expire", KEYS[1], ARGV[1])
     end
     return current
 """
@@ -84,7 +84,7 @@ class RateLimit(object):
 
         :return: bool: True if limit has been exceeded or False otherwise
         """
-        return self._get_usage() > self._max_requests
+        return self.get_usage() >= self._max_requests
 
     def increment_usage(self):
         """
@@ -117,3 +117,11 @@ class RateLimit(object):
         redis_version = self._redis.info()['redis_version']
         is_supported = StrictVersion(redis_version) >= StrictVersion('2.6.0')
         return bool(is_supported)
+
+    def _reset(self):
+        """
+        Deletes all keys that start with ‘rate_limit:’.
+        """
+        for rate_limit_key in self._redis.keys('rate_limit:*'):
+            self._redis.delete(rate_limit_key)
+

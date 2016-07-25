@@ -1,2 +1,17 @@
 *.pyx
+*.pyc
+
+*.swp
+*.orig
+
 .idea/
+
+# virtualenv
+venv/
+env/
+
+build/
+dist/
+
+*.egg**
+
