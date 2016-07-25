@@ -19,7 +19,7 @@ Example: 10 requests per second
 
     >>> from python-redis-rate-limit import RateLimit, TooManyRequests
     >>> try:
-    >>>   with RateLimit(resource='users_list', client='192.168.0.10', max_requests=10)
+    >>>   with RateLimit(resource='users_list', client='192.168.0.10', max_requests=10):
     >>>     return '200 OK'
     >>> except TooManyRequests:
     >>>   return '429 Too Many Requests'
@@ -31,7 +31,7 @@ Example: 600 requests per minute
 
     >>> from python-redis-rate-limit import RateLimit, TooManyRequests
     >>> try:
-    >>>   with RateLimit(resource='users_list', client='192.168.0.10', max_requests=600, expire=60)
+    >>>   with RateLimit(resource='users_list', client='192.168.0.10', max_requests=600, expire=60):
     >>>     return '200 OK'
     >>> except TooManyRequests:
     >>>   return '429 Too Many Requests'
@@ -43,7 +43,7 @@ Example: 100 requests per hour
 
     >>> from python-redis-rate-limit import RateLimit, TooManyRequests
     >>> try:
-    >>>   with RateLimit(resource='users_list', client='192.168.0.10', max_requests=100, expire=3600)
+    >>>   with RateLimit(resource='users_list', client='192.168.0.10', max_requests=100, expire=3600):
     >>>     return '200 OK'
     >>> except TooManyRequests:
     >>>   return '429 Too Many Requests'
