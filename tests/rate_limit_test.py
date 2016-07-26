@@ -27,19 +27,19 @@ class TestRedisRateLimit(unittest.TestCase):
         Should raise TooManyRequests Exception when trying to increment for the
         eleventh time.
         """
-        self.assertEquals(self.rate_limit.get_usage(), 0)
-        self.assertEquals(self.rate_limit.has_been_reached(), False)
+        self.assertEqual(self.rate_limit.get_usage(), 0)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
 
         self._make_10_requests()
-        self.assertEquals(self.rate_limit.get_usage(), 10)
-        self.assertEquals(self.rate_limit.has_been_reached(), True)
+        self.assertEqual(self.rate_limit.get_usage(), 10)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
 
         with self.assertRaises(TooManyRequests):
             with self.rate_limit:
                 pass
 
-        self.assertEquals(self.rate_limit.get_usage(), 11)
-        self.assertEquals(self.rate_limit.has_been_reached(), True)
+        self.assertEqual(self.rate_limit.get_usage(), 11)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
 
     def test_expire(self):
         """
