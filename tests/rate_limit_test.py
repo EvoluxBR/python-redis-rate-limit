@@ -28,18 +28,18 @@ class TestRedisRateLimit(unittest.TestCase):
         eleventh time.
         """
         self.assertEquals(self.rate_limit.get_usage(), 0)
-        self.assertEquals(self.rate_limit.has_been_exceeded(), False)
+        self.assertEquals(self.rate_limit.has_been_reached(), False)
 
         self._make_10_requests()
         self.assertEquals(self.rate_limit.get_usage(), 10)
-        self.assertEquals(self.rate_limit.has_been_exceeded(), True)
+        self.assertEquals(self.rate_limit.has_been_reached(), True)
 
         with self.assertRaises(TooManyRequests):
             with self.rate_limit:
                 pass
 
         self.assertEquals(self.rate_limit.get_usage(), 11)
-        self.assertEquals(self.rate_limit.has_been_exceeded(), True)
+        self.assertEquals(self.rate_limit.has_been_reached(), True)
 
     def test_expire(self):
         """

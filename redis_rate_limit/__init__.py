@@ -78,11 +78,11 @@ class RateLimit(object):
         """
         return int(self._redis.get(self._rate_limit_key) or 0)
 
-    def has_been_exceeded(self):
+    def has_been_reached(self):
         """
-        Checks if Rate Limit has been exceeded.
+        Checks if Rate Limit has been reached.
 
-        :return: bool: True if limit has been exceeded or False otherwise
+        :return: bool: True if limit has been reached or False otherwise
         """
         return self.get_usage() >= self._max_requests
 
