@@ -7,8 +7,6 @@ python-redis-rate-limit
 .. image:: https://img.shields.io/pypi/v/python-redis-rate-limit.svg
     :target: https://pypi.python.org/pypi/python-redis-rate-limit
 
-.. image:: https://img.shields.io/pypi/dm/python-redis-rate-limit.svg
-    :target: https://pypi.python.org/pypi/python-redis-rate-limit
 
 This lib offers an abstraction of a Rate Limit algorithm implemented on top of
 Redis >= 2.6.0.
