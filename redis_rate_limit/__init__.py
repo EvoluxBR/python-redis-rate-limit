@@ -124,6 +124,7 @@ class RateLimit(object):
         """
         Deletes all keys that start with ‘rate_limit:’.
         """
-        for rate_limit_key in self._redis.keys('rate_limit:*'):
+        matching_keys = self._redis.scan_iter(match='{0}*'.format(self._prefix))
+        for rate_limit_key in matching_keys:
             self._redis.delete(rate_limit_key)
 
