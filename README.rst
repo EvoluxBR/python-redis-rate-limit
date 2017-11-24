@@ -46,3 +46,17 @@ Example: 100 requests per hour
     >>> except TooManyRequests:
     >>>   return '429 Too Many Requests'
     >>>
+
+You can also setup factory to use later.
+Example:
+
+.. code-block:: python
+
+    >>> from redis_rate_limit import RateLimiter, TooManyRequests
+    >>> limiter = RateLimit(resource='users_list', client='192.168.0.10', max_requests=100, expire=3600)
+    >>> try:
+    >>>   with limiter.limit(client='192.168.0.10'):
+    >>>     return '200 OK'
+    >>> except TooManyRequests:
+    >>>   return '429 Too Many Requests'
+    >>>

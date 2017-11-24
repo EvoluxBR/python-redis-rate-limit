@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 import time
-from redis_rate_limit import RateLimit, TooManyRequests
+from redis_rate_limit import RateLimit, RateLimiter, TooManyRequests
 
 
 class TestRedisRateLimit(unittest.TestCase):
@@ -63,6 +63,27 @@ class TestRedisRateLimit(unittest.TestCase):
         with self.assertRaises(TooManyRequests):
             with self.rate_limit:
                 pass
+
+    def test_limit_10_using_rate_limiter(self):
+        """
+        Should raise TooManyRequests Exception when trying to increment for the
+        eleventh time.
+        """
+        self.rate_limit = RateLimiter(resource='test', max_requests=10,
+                                      expire=2).limit(client='localhost')
+        self.assertEqual(self.rate_limit.get_usage(), 0)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        self._make_10_requests()
+        self.assertEqual(self.rate_limit.get_usage(), 10)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
+
+        with self.assertRaises(TooManyRequests):
+            with self.rate_limit:
+                pass
+
+        self.assertEqual(self.rate_limit.get_usage(), 11)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
 
 
 if __name__ == '__main__':

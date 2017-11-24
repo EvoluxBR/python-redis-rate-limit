@@ -128,3 +128,30 @@ class RateLimit(object):
         for rate_limit_key in matching_keys:
             self._redis.delete(rate_limit_key)
 
+
+class RateLimiter(object):
+    def __init__(self, resource, max_requests, expire=None, redis_pool=REDIS_POOL):
+        """
+        Rate limit factory. Checks if RateLimit is supported when limit is called.
+        :param resource: resource identifier string (i.e. ‘user_pictures’)
+        :param max_requests: integer (i.e. ‘10’)
+        :param expire: seconds to wait before resetting counters (i.e. ‘60’)
+        :param redis_pool: instance of redis.ConnectionPool.
+               Default: ConnectionPool(host='127.0.0.1', port=6379, db=0)
+       """
+        self.resource = resource
+        self.max_requests = max_requests
+        self.expire = expire
+        self.redis_pool = redis_pool
+
+    def limit(self, client):
+        """
+        :param client: client identifier string (i.e. ‘192.168.0.10’)
+        """
+        return RateLimit(
+            resource=self.resource,
+            client=client,
+            max_requests=self.max_requests,
+            expire=self.expire,
+            redis_pool=self.redis_pool,
+        )
