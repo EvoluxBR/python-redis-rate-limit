@@ -53,7 +53,7 @@ Example:
 .. code-block:: python
 
     >>> from redis_rate_limit import RateLimiter, TooManyRequests
-    >>> limiter = RateLimit(resource='users_list', client='192.168.0.10', max_requests=100, expire=3600)
+    >>> limiter = RateLimiter(resource='users_list', max_requests=100, expire=3600)
     >>> try:
     >>>   with limiter.limit(client='192.168.0.10'):
     >>>     return '200 OK'
