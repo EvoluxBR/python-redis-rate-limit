@@ -47,7 +47,7 @@ Example: 100 requests per hour
     >>>   return '429 Too Many Requests'
     >>>
 
-Example: you can also setup factory to use later
+Example: you can also setup a factory to use it later
 
 .. code-block:: python
 
@@ -60,7 +60,7 @@ Example: you can also setup factory to use later
     >>>   return '429 Too Many Requests'
     >>>
 
-Example: you can also pass an Redis Pool
+Example: you can also pass an optional Redis Pool
 
 .. code-block:: python
 
