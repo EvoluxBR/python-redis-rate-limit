@@ -47,8 +47,7 @@ Example: 100 requests per hour
     >>>   return '429 Too Many Requests'
     >>>
 
-You can also setup factory to use later.
-Example:
+Example: you can also setup factory to use later
 
 .. code-block:: python
 
@@ -56,6 +55,20 @@ Example:
     >>> limiter = RateLimiter(resource='users_list', max_requests=100, expire=3600)
     >>> try:
     >>>   with limiter.limit(client='192.168.0.10'):
+    >>>     return '200 OK'
+    >>> except TooManyRequests:
+    >>>   return '429 Too Many Requests'
+    >>>
+
+Example: you can also pass an Redis Pool
+
+.. code-block:: python
+
+    >>> import redis
+    >>> from redis_rate_limit import RateLimit, TooManyRequests
+    >>> redis_pool = redis.ConnectionPool(host='127.0.0.1', port=6379, db=0)
+    >>> try:
+    >>>   with RateLimit(resource='users_list', client='192.168.0.10', max_requests=10, redis_pool=redis_pool):
     >>>     return '200 OK'
     >>> except TooManyRequests:
     >>>   return '429 Too Many Requests'
