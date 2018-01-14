@@ -85,6 +85,31 @@ class TestRedisRateLimit(unittest.TestCase):
         self.assertEqual(self.rate_limit.get_usage(), 11)
         self.assertEqual(self.rate_limit.has_been_reached(), True)
 
+    def test_wait_time_limit_reached(self):
+        """
+        Should report wait time approximately equal to expire after reaching
+        the limit without delay between requests. 
+        """
+        self.rate_limit = RateLimit(resource='test', client='localhost',
+                                    max_requests=10, expire=1)
+        self._make_10_requests()
+        with self.assertRaises(TooManyRequests):
+            with self.rate_limit:
+                pass
+        self.assertAlmostEqual(self.rate_limit.get_wait_time(), 1, places=2)
+
+    def test_wait_time_limit_expired(self):
+        """
+        Should report wait time equal to expire / max_requests before any
+        requests were made and after the limit has expired.
+        """
+        self.rate_limit = RateLimit(resource='test', client='localhost',
+                                    max_requests=10, expire=1)
+        self.assertEqual(self.rate_limit.get_wait_time(), 1./10)
+        self._make_10_requests()
+        time.sleep(1)
+        self.assertEqual(self.rate_limit.get_wait_time(), 1./10)
+
 
 if __name__ == '__main__':
     unittest.main()
