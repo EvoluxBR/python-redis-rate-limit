@@ -80,6 +80,21 @@ class RateLimit(object):
         """
         return int(self._redis.get(self._rate_limit_key) or 0)
 
+    def get_wait_time(self):
+        """
+        Returns estimated optimal wait time for subsequent requests.
+        If limit has already been reached, return wait time until it gets reset.
+
+        :return: float: wait time in seconds
+        """
+        expire = self._redis.pttl(self._rate_limit_key)
+        # Fallback if key has not yet been set or TTL can't be retrieved
+        expire = expire / 1000.0 if expire else float(self._expire)
+        if self.has_been_reached():
+            return expire
+        else:
+            return expire / (self._max_requests - self.get_usage())
+
     def has_been_reached(self):
         """
         Checks if Rate Limit has been reached.
