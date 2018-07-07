@@ -36,6 +36,16 @@ class TooManyRequests(Exception):
     """
     pass
 
+class InitialValueTooHigh(Exception):
+    """
+    Happens when we try to increment the rate limiter far beyond
+    the actual limit.
+
+    e.g. when the rate limit is 5 requests per second, and we increment
+    the counter by 20.
+    """
+    pass
+
 
 class RateLimit(object):
     """
@@ -116,6 +126,11 @@ class RateLimit(object):
 
         :return: integer: current usage
         """
+        if increment_by > self._max_requests:
+            raise InitialValueTooHigh(
+                f"Value to increment by {increment_by} is greater than "
+                f"the maximum of {self._max_requests}"
+            )
         try:
             current_usage = self._redis.evalsha(
                 INCREMENT_SCRIPT_HASH, 1, self._rate_limit_key, self._expire, increment_by)
@@ -124,7 +139,9 @@ class RateLimit(object):
                 INCREMENT_SCRIPT, 1, self._rate_limit_key, self._expire, increment_by)
 
         if int(current_usage) > self._max_requests:
-            raise TooManyRequests()
+            raise TooManyRequests(
+                f"{current_usage} is over the maximum of {self._max_requests}"
+            )
 
         return current_usage
 
