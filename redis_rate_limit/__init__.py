@@ -97,13 +97,42 @@ class RateLimit(object):
 
         :return: float: wait time in seconds
         """
-        expire = self._redis.pttl(self._rate_limit_key)
-        # Fallback if key has not yet been set or TTL can't be retrieved
-        expire = expire / 1000.0 if expire else float(self._expire)
+        ttl = self._redis.pttl(self._rate_limit_key)
+        # If the key wasn't set or its TTL can't be found, then
+        # default to the key expiration time as the TTL
+        ttl = ttl / 1000.0 if ttl else float(self._expire)
+        usage = self.get_usage()
+        # If we exceeded the rate limit
         if self.has_been_reached():
-            return expire
+            # return expire * (self.get_usage() / self._max_requests)
+            # time_elapsed is how much time since the TTL was set on the key
+            time_elapsed = self._expire - ttl
+            # This the percentage of total allowable requests
+            # that have been executed since the key was created.
+            usage_ratio = usage / self._max_requests
+            # This is the number of seconds that the client should wait
+            # before trying again, assuming that no time elapsed
+            # between making the key and achieving this usage ratio.
+            seconds_per_usage = self._expire * usage_ratio
+            # We subtract time elapsed in this bucket to account for
+            # the requests that "belong" in the current bucket.
+            # If usage_ratio > 1, then we have requests that should belong
+            # in the next bucket, and the client should pay a time penalty
+            # for its aggressive requesting.
+            wait_duration = seconds_per_usage - time_elapsed
+            return wait_duration
+        # If we haven't incremented the counter at all.
+        elif usage == 0:
+            # We say that no wait time is needed if the key has not been
+            # incremented since it was created.
+            # People will only need to wait *after* the first usage.
+            return 0
+        # If we have made requests, but not yet hit the rate limit.
         else:
-            return expire / (self._max_requests - self.get_usage())
+            # This returns the approximate amount of time-per-request
+            # left in the TTL, based on how many requests have been
+            # made already.
+            return ttl / (self._max_requests - usage)
 
     def has_been_reached(self):
         """
