@@ -127,10 +127,7 @@ class RateLimit(object):
         :return: integer: current usage
         """
         if increment_by > self._max_requests:
-            raise InitialValueTooHigh(
-                f"Value to increment by {increment_by} is greater than "
-                f"the maximum of {self._max_requests}"
-            )
+            raise InitialValueTooHigh()
         try:
             current_usage = self._redis.evalsha(
                 INCREMENT_SCRIPT_HASH, 1, self._rate_limit_key, self._expire, increment_by)
@@ -139,9 +136,7 @@ class RateLimit(object):
                 INCREMENT_SCRIPT, 1, self._rate_limit_key, self._expire, increment_by)
 
         if int(current_usage) > self._max_requests:
-            raise TooManyRequests(
-                f"{current_usage} is over the maximum of {self._max_requests}"
-            )
+            raise TooManyRequests()
 
         return current_usage
 
