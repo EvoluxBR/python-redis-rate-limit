@@ -128,6 +128,7 @@ class RateLimit(object):
         """
         if increment_by > self._max_requests:
             raise InitialValueTooHigh()
+
         try:
             current_usage = self._redis.evalsha(
                 INCREMENT_SCRIPT_HASH, 1, self._rate_limit_key, self._expire, increment_by)

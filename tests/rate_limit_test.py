@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 import unittest
 import time
-from redis_rate_limit import RateLimit, RateLimiter, TooManyRequests
+from redis_rate_limit import RateLimit, RateLimiter, TooManyRequests, \
+    InitialValueTooHigh
 
 
 class TestRedisRateLimit(unittest.TestCase):
@@ -88,7 +89,7 @@ class TestRedisRateLimit(unittest.TestCase):
     def test_wait_time_limit_reached(self):
         """
         Should report wait time approximately equal to expire after reaching
-        the limit without delay between requests. 
+        the limit without delay between requests.
         """
         self.rate_limit = RateLimit(resource='test', client='localhost',
                                     max_requests=10, expire=1)
@@ -110,7 +111,90 @@ class TestRedisRateLimit(unittest.TestCase):
         time.sleep(1)
         self.assertEqual(self.rate_limit.get_wait_time(), 1./10)
 
+    def test_increment_multiple(self):
+        """
+        Test incrementing usage by a value > 1
+        """
+        self.rate_limit.increment_usage(7)
+        self.rate_limit.increment_usage(3)
+
+        self.assertEqual(self.rate_limit.get_usage(), 10)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
+
+        with self.assertRaises(TooManyRequests):
+            self.rate_limit.increment_usage(1)
+
+        self.assertEqual(self.rate_limit.get_usage(), 11)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
+
+        with self.assertRaises(TooManyRequests):
+            self.rate_limit.increment_usage(5)
+
+        self.assertEqual(self.rate_limit.get_usage(), 16)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
+
+    def test_increment_multiple_too_much(self):
+        """
+        Test that we cannot bulk-increment a value higher than
+        the bucket limit.
+        """
+        with self.assertRaises(InitialValueTooHigh):
+            self.rate_limit.increment_usage(11)
+
+        self.assertEqual(self.rate_limit.get_usage(), 0)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+    def test_increment_by_zero(self):
+        """
+        Test that an increment by zero does not change the
+        rate limit.
+        """
+        self.assertEqual(self.rate_limit.get_usage(), 0)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        self.rate_limit.increment_usage(0)
+        self.assertEqual(self.rate_limit.get_usage(), 0)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        self.rate_limit.increment_usage(5)
+        self.assertEqual(self.rate_limit.get_usage(), 5)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        self.rate_limit.increment_usage(0)
+        self.assertEqual(self.rate_limit.get_usage(), 5)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        self.rate_limit.increment_usage(5)
+        self.assertEqual(self.rate_limit.get_usage(), 10)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
+
+        self.rate_limit.increment_usage(0)
+        self.assertEqual(self.rate_limit.get_usage(), 10)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
+
+    def test_increment_by_negative(self):
+        """
+        Test that we can decrement the counter.
+        """
+        self.assertEqual(self.rate_limit.get_usage(), 0)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        self.rate_limit.increment_usage(-5)
+        self.assertEqual(self.rate_limit.get_usage(), -5)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        self.rate_limit.increment_usage(7)
+        self.assertEqual(self.rate_limit.get_usage(), 2)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        with self.assertRaises(TooManyRequests):
+            self.rate_limit.increment_usage(9)
+        self.assertEqual(self.rate_limit.get_usage(), 11)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
+
+        self.rate_limit.increment_usage(-3)
+        self.assertEqual(self.rate_limit.get_usage(), 8)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
 
 if __name__ == '__main__':
     unittest.main()
-
