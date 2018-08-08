@@ -66,7 +66,7 @@ class RateLimit(object):
         self._expire = expire or 1
 
     def __enter__(self):
-        self.increment_usage()
+        return self.increment_usage()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
