@@ -110,6 +110,15 @@ class TestRedisRateLimit(unittest.TestCase):
         time.sleep(1)
         self.assertEqual(self.rate_limit.get_wait_time(), 1./10)
 
+    def test_context_manager_returns_usage(self):
+        """
+        Should return the usage when used as a context manager.
+        """
+        self.rate_limit = RateLimit(resource='test', client='localhost',
+        max_requests=1, expire=1)
+        with self.rate_limit as usage:
+            self.assertEqual(usage, 1)
+
 
 if __name__ == '__main__':
     unittest.main()
