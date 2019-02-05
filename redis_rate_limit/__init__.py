@@ -89,7 +89,7 @@ class RateLimit(object):
         """
         expire = self._redis.pttl(self._rate_limit_key)
         # Fallback if key has not yet been set or TTL can't be retrieved
-        expire = expire / 1000.0 if expire else float(self._expire)
+        expire = expire / 1000.0 if expire > 0 else float(self._expire)
         if self.has_been_reached():
             return expire
         else:
