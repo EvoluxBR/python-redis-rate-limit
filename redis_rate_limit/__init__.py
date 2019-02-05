@@ -5,7 +5,6 @@ from distutils.version import StrictVersion
 from redis.exceptions import NoScriptError
 from redis import Redis, ConnectionPool
 
-__version__ = "0.0.1"
 
 # Adapted from http://redis.io/commands/incr#pattern-rate-limiter-2
 INCREMENT_SCRIPT = b"""
