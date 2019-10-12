@@ -119,6 +119,28 @@ class TestRedisRateLimit(unittest.TestCase):
         with self.rate_limit as usage:
             self.assertEqual(usage, 1)
 
+    def test_limit_10_using_as_decorator(self):
+        """
+        Should raise TooManyRequests Exception when trying to increment for the
+        eleventh time.
+        """
+        self.assertEqual(self.rate_limit.get_usage(), 0)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        self._make_10_requests()
+        self.assertEqual(self.rate_limit.get_usage(), 10)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
+
+        @self.rate_limit
+        def limit_with_decorator():
+            pass
+
+        with self.assertRaises(TooManyRequests):
+            limit_with_decorator()
+
+        self.assertEqual(self.rate_limit.get_usage(), 11)
+        self.assertEqual(self.rate_limit.has_been_reached(), True)
+
 
 if __name__ == '__main__':
     unittest.main()

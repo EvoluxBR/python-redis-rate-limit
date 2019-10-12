@@ -14,7 +14,7 @@ python-redis-rate-limit
 This lib offers an abstraction of a Rate Limit algorithm implemented on top of
 Redis >= 2.6.0.
 
-Supported Python Versions: 2.7, 3.5, 3.6
+Supported Python Versions: 2.7, 3.5+
 
 Example: 10 requests per second
 
@@ -24,6 +24,21 @@ Example: 10 requests per second
     try:
       with RateLimit(resource='users_list', client='192.168.0.10', max_requests=10):
         return '200 OK'
+    except TooManyRequests:
+      return '429 Too Many Requests'
+
+Example: using as a decorator
+
+.. code-block:: python
+
+    from redis_rate_limit import RateLimit, TooManyRequests
+
+    @RateLimit(resource='users_list', client='192.168.0.10', max_requests=10)
+    def list_users():
+      return '200 OK'
+
+    try:
+      return list_users()
     except TooManyRequests:
       return '429 Too Many Requests'
 
