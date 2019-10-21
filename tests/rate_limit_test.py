@@ -2,16 +2,22 @@
 # -*- coding: utf-8 -*-
 import unittest
 import time
+
+from unittest.mock import patch
+
 from redis_rate_limit import RateLimit, RateLimiter, TooManyRequests
+from tests import MemoryBackend
 
 
+@patch('redis_rate_limit.RedisBackend', MemoryBackend)
 class TestRedisRateLimit(unittest.TestCase):
     def setUp(self):
         """
         Initialises Rate Limit class and delete all keys from Redis.
         """
-        self.rate_limit = RateLimit(resource='test', client='localhost',
-                                    max_requests=10)
+        with patch('redis_rate_limit.RedisBackend', MemoryBackend):
+            self.rate_limit = RateLimit(resource='test', client='localhost',
+                                        max_requests=10)
         self.rate_limit._reset()
 
     def _make_10_requests(self):
