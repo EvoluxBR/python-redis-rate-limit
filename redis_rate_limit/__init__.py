@@ -20,6 +20,66 @@ INCREMENT_SCRIPT_HASH = sha1(INCREMENT_SCRIPT).hexdigest()
 REDIS_POOL = ConnectionPool(host='127.0.0.1', port=6379, db=0)
 
 
+class RateLimitBackend(object):
+    _expire: int
+
+    def get(self, key):
+        raise NotImplemented
+
+    def ttl(self, key):
+        raise NotImplemented
+
+    def incr(self, key):
+        raise NotImplemented
+
+    def scan(self, starts_with):
+        raise NotImplemented
+
+    def delete(self, key):
+        raise NotImplemented
+
+
+class RedisBackend(RateLimitBackend):
+    def __init__(self, redis_pool=REDIS_POOL, expire=None):
+        self._redis = Redis(connection_pool=redis_pool)
+        if not self._is_rate_limit_supported():
+            raise RedisVersionNotSupported()
+        self._expire = expire
+
+    def _is_rate_limit_supported(self):
+        """
+        Checks if Rate Limit is supported which can basically be found by
+        looking at Redis database version that should be 2.6.0 or greater.
+
+        :return: bool
+        """
+        redis_version = self._redis.info()['redis_version']
+        is_supported = StrictVersion(redis_version) >= StrictVersion('2.6.0')
+        return bool(is_supported)
+
+    def get(self, key):
+        return self._redis.get(key)
+
+    def ttl(self, key):
+        return self._redis.pttl(key)
+
+    def incr(self, key):
+        try:
+            current_usage = self._redis.evalsha(
+                INCREMENT_SCRIPT_HASH, 1, key, self._expire)
+        except NoScriptError:
+            current_usage = self._redis.eval(
+                INCREMENT_SCRIPT, 1, key, self._expire)
+
+        return current_usage
+
+    def scan(self, starts_with):
+        return self._redis.scan_iter(match="{0}**".format(starts_with))
+
+    def delete(self, key):
+        self._redis.delete(key)
+
+
 class RedisVersionNotSupported(Exception):
     """
     Rate Limit depends on Redis’ commands EVALSHA and EVAL which are
@@ -56,13 +116,11 @@ class RateLimit(object):
         :param redis_pool: instance of redis.ConnectionPool.
                Default: ConnectionPool(host='127.0.0.1', port=6379, db=0)
         """
-        self._redis = Redis(connection_pool=redis_pool)
-        if not self._is_rate_limit_supported():
-            raise RedisVersionNotSupported()
-
         self._rate_limit_key = "rate_limit:{0}_{1}".format(resource, client)
         self._max_requests = max_requests
         self._expire = expire or 1
+
+        self._backend = RedisBackend(redis_pool=redis_pool, expire=self._expire)
 
     def __enter__(self):
         return self.increment_usage()
@@ -77,7 +135,7 @@ class RateLimit(object):
 
         :return: integer: current usage
         """
-        return int(self._redis.get(self._rate_limit_key) or 0)
+        return int(self._backend.get(self._rate_limit_key) or 0)
 
     def get_wait_time(self):
         """
@@ -86,7 +144,7 @@ class RateLimit(object):
 
         :return: float: wait time in seconds
         """
-        expire = self._redis.pttl(self._rate_limit_key)
+        expire = self._backend.ttl(self._rate_limit_key)
         # Fallback if key has not yet been set or TTL can't be retrieved
         expire = expire / 1000.0 if expire > 0 else float(self._expire)
         if self.has_been_reached():
@@ -111,36 +169,20 @@ class RateLimit(object):
 
         :return: integer: current usage
         """
-        try:
-            current_usage = self._redis.evalsha(
-                INCREMENT_SCRIPT_HASH, 1, self._rate_limit_key, self._expire)
-        except NoScriptError:
-            current_usage = self._redis.eval(
-                INCREMENT_SCRIPT, 1, self._rate_limit_key, self._expire)
+        current_usage = self._backend.incr(self._rate_limit_key)
 
         if int(current_usage) > self._max_requests:
             raise TooManyRequests()
 
         return current_usage
 
-    def _is_rate_limit_supported(self):
-        """
-        Checks if Rate Limit is supported which can basically be found by
-        looking at Redis database version that should be 2.6.0 or greater.
-
-        :return: bool
-        """
-        redis_version = self._redis.info()['redis_version']
-        is_supported = StrictVersion(redis_version) >= StrictVersion('2.6.0')
-        return bool(is_supported)
-
     def _reset(self):
         """
         Deletes all keys that start with ‘rate_limit:’.
         """
-        matching_keys = self._redis.scan_iter(match='{0}*'.format('rate_limit:*'))
+        matching_keys = self._backend.scan(starts_with='rate_limit')
         for rate_limit_key in matching_keys:
-            self._redis.delete(rate_limit_key)
+            self._backend.delete(rate_limit_key)
 
 
 class RateLimiter(object):
