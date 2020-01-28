@@ -64,6 +64,17 @@ class RateLimit(object):
         self._max_requests = max_requests
         self._expire = expire or 1
 
+    def __call__(self, func):
+        """
+        Returns a wrapped function that could be used as a decorator to
+        rate limit resources.
+        """
+        def wrapper(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+
+        return wrapper
+
     def __enter__(self):
         return self.increment_usage()
 
