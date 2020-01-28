@@ -9,8 +9,8 @@ from redis import Redis, ConnectionPool
 # Adapted from http://redis.io/commands/incr#pattern-rate-limiter-2
 INCREMENT_SCRIPT = b"""
     local current
-    current = tonumber(redis.call("incr", KEYS[1]))
-    if current == 1 then
+    current = tonumber(redis.call("incrby", KEYS[1], ARGV[2]))
+    if current == tonumber(ARGV[2]) then
         redis.call("expire", KEYS[1], ARGV[1])
     end
     return current
@@ -32,6 +32,16 @@ class TooManyRequests(Exception):
     """
     Occurs when the maximum number of requests is reached for a given resource
     of an specific user.
+    """
+    pass
+
+class InitialValueTooHigh(Exception):
+    """
+    Happens when we try to increment the rate limiter far beyond
+    the actual limit.
+
+    e.g. when the rate limit is 5 requests per second, and we increment
+    the counter by 20.
     """
     pass
 
@@ -113,21 +123,28 @@ class RateLimit(object):
         """
         return self.get_usage() >= self._max_requests
 
-    def increment_usage(self):
+    def increment_usage(self, increment_by=1):
         """
         Calls a LUA script that should increment the resource usage by client.
 
         If the resource limit overflows the maximum number of requests, this
         method raises an Exception.
 
+        :param increment_by: The count to increment the rate limiter by.
+        This is typically 1, but higher or lower values are provided
+        for more flexible rate-limiting schemes.
+
         :return: integer: current usage
         """
+        if increment_by > self._max_requests:
+            raise InitialValueTooHigh()
+
         try:
             current_usage = self._redis.evalsha(
-                INCREMENT_SCRIPT_HASH, 1, self._rate_limit_key, self._expire)
+                INCREMENT_SCRIPT_HASH, 1, self._rate_limit_key, self._expire, increment_by)
         except NoScriptError:
             current_usage = self._redis.eval(
-                INCREMENT_SCRIPT, 1, self._rate_limit_key, self._expire)
+                INCREMENT_SCRIPT, 1, self._rate_limit_key, self._expire, increment_by)
 
         if int(current_usage) > self._max_requests:
             raise TooManyRequests()
