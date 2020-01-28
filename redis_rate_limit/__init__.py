@@ -5,7 +5,6 @@ from distutils.version import StrictVersion
 from redis.exceptions import NoScriptError
 from redis import Redis, ConnectionPool
 
-__version__ = "0.0.1"
 
 # Adapted from http://redis.io/commands/incr#pattern-rate-limiter-2
 INCREMENT_SCRIPT = b"""
@@ -75,8 +74,19 @@ class RateLimit(object):
         self._max_requests = max_requests
         self._expire = expire or 1
 
+    def __call__(self, func):
+        """
+        Returns a wrapped function that could be used as a decorator to
+        rate limit resources.
+        """
+        def wrapper(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+
+        return wrapper
+
     def __enter__(self):
-        self.increment_usage()
+        return self.increment_usage()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -99,7 +109,7 @@ class RateLimit(object):
         """
         expire = self._redis.pttl(self._rate_limit_key)
         # Fallback if key has not yet been set or TTL can't be retrieved
-        expire = expire / 1000.0 if expire else float(self._expire)
+        expire = expire / 1000.0 if expire > 0 else float(self._expire)
         if self.has_been_reached():
             return expire
         else:

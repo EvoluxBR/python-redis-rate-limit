@@ -11,7 +11,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='python-redis-rate-limit',
-    version='0.0.6',
+    version='0.0.7',
     description=u'Python Rate Limiter based on Redis.',
     long_description=readme,
     author=u'Victor Torres',
@@ -23,6 +23,9 @@ setup(
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'License :: OSI Approved :: MIT License'
     ],
     install_requires=requires
