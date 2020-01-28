@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 import time
-from redis_rate_limit import RateLimit, RateLimiter, TooManyRequests, \
-    InitialValueTooHigh
+from redis_rate_limit import RateLimit, RateLimiter, TooManyRequests
 
 
 class TestRedisRateLimit(unittest.TestCase):
@@ -169,7 +168,7 @@ class TestRedisRateLimit(unittest.TestCase):
         Test that we cannot bulk-increment a value higher than
         the bucket limit.
         """
-        with self.assertRaises(InitialValueTooHigh):
+        with self.assertRaises(ValueError):
             self.rate_limit.increment_usage(11)
 
         self.assertEqual(self.rate_limit.get_usage(), 0)
@@ -177,54 +176,31 @@ class TestRedisRateLimit(unittest.TestCase):
 
     def test_increment_by_zero(self):
         """
-        Test that an increment by zero does not change the
-        rate limit.
+        Should not allow increment by zero.
         """
         self.assertEqual(self.rate_limit.get_usage(), 0)
         self.assertEqual(self.rate_limit.has_been_reached(), False)
 
-        self.rate_limit.increment_usage(0)
-        self.assertEqual(self.rate_limit.get_usage(), 0)
-        self.assertEqual(self.rate_limit.has_been_reached(), False)
-
         self.rate_limit.increment_usage(5)
         self.assertEqual(self.rate_limit.get_usage(), 5)
         self.assertEqual(self.rate_limit.has_been_reached(), False)
 
-        self.rate_limit.increment_usage(0)
+        with self.assertRaises(ValueError):
+            self.rate_limit.increment_usage(0)
+
         self.assertEqual(self.rate_limit.get_usage(), 5)
         self.assertEqual(self.rate_limit.has_been_reached(), False)
-
-        self.rate_limit.increment_usage(5)
-        self.assertEqual(self.rate_limit.get_usage(), 10)
-        self.assertEqual(self.rate_limit.has_been_reached(), True)
-
-        self.rate_limit.increment_usage(0)
-        self.assertEqual(self.rate_limit.get_usage(), 10)
-        self.assertEqual(self.rate_limit.has_been_reached(), True)
 
     def test_increment_by_negative(self):
         """
-        Test that we can decrement the counter.
+        Should not allow decrement the counter.
         """
         self.assertEqual(self.rate_limit.get_usage(), 0)
         self.assertEqual(self.rate_limit.has_been_reached(), False)
+        with self.assertRaises(ValueError):
+            self.rate_limit.increment_usage(-5)
 
-        self.rate_limit.increment_usage(-5)
-        self.assertEqual(self.rate_limit.get_usage(), -5)
-        self.assertEqual(self.rate_limit.has_been_reached(), False)
-
-        self.rate_limit.increment_usage(7)
-        self.assertEqual(self.rate_limit.get_usage(), 2)
-        self.assertEqual(self.rate_limit.has_been_reached(), False)
-
-        with self.assertRaises(TooManyRequests):
-            self.rate_limit.increment_usage(9)
-        self.assertEqual(self.rate_limit.get_usage(), 11)
-        self.assertEqual(self.rate_limit.has_been_reached(), True)
-
-        self.rate_limit.increment_usage(-3)
-        self.assertEqual(self.rate_limit.get_usage(), 8)
+        self.assertEqual(self.rate_limit.get_usage(), 0)
         self.assertEqual(self.rate_limit.has_been_reached(), False)
 
 
