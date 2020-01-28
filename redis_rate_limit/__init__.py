@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 #  -*- coding: utf-8 -*-
+
+import functools
 from hashlib import sha1
 from distutils.version import StrictVersion
 from redis.exceptions import NoScriptError
@@ -79,6 +81,7 @@ class RateLimit(object):
         Returns a wrapped function that could be used as a decorator to
         rate limit resources.
         """
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             with self:
                 return func(*args, **kwargs)
