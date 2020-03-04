@@ -130,11 +130,14 @@ class RateLimit(object):
         :return: integer: current usage
         """
         if increment_by > self._max_requests:
-            raise ValueError(f'increment_by {increment_by} overflows '
-                             f'max_requests of {self._max_requests}')
+            raise ValueError('increment_by {increment_by} overflows '
+                             'max_requests of {max_requests}'
+                             .format(increment_by=increment_by, 
+                                     max_requests=self._max_requests))
         elif increment_by <= 0:
-            raise ValueError(f'{increment_by} is not a valid increment, '
-                             f'should be greater than or equal to zero.')
+            raise ValueError('{increment_by} is not a valid increment, '
+                             'should be greater than or equal to zero.'
+                             .format(increment_by=increment_by))
 
         try:
             current_usage = self._redis.evalsha(
