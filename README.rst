@@ -64,6 +64,17 @@ Example: 100 requests per hour
     except TooManyRequests:
       return '429 Too Many Requests'
 
+Example: you can also pass an optional list of ignored_clients to bypass Rate Limit
+
+.. code-block:: python
+
+    from redis_rate_limit import RateLimit, TooManyRequests
+    try:
+      with RateLimit(resource='users_list', client='192.168.0.10', max_requests=100, ignored_clients=['192.168.0.10'], expire=3600):
+        return '200 OK'
+    except TooManyRequests:
+      return '429 Too Many Requests'
+
 Example: you can also setup a factory to use it later
 
 .. code-block:: python
