@@ -41,11 +41,11 @@ class TestRedisRateLimit(unittest.TestCase):
         self.assertEqual(self.rate_limit.get_usage(), 11)
         self.assertEqual(self.rate_limit.has_been_reached(), True)
 
-    def test_whitelisted_clients(self):
+    def test_ignored_clients(self):
         """
-        Should not increment counter if client is part of whitelisted_clients list.
+        Should not increment counter if client is part of ignored_clients list.
         """
-        self.rate_limit = RateLimit(resource='test', client='localhost', whitelisted_clients=['localhost'],
+        self.rate_limit = RateLimit(resource='test', client='localhost', ignored_clients=['localhost'],
                                     max_requests=10, expire=2)
         self.assertEqual(self.rate_limit.get_usage(), 0)
         self.assertEqual(self.rate_limit.has_been_reached(), False)

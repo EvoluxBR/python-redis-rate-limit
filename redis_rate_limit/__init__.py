@@ -43,22 +43,24 @@ class RateLimit(object):
     This class offers an abstraction of a Rate Limit algorithm implemented on
     top of Redis >= 2.6.0.
     """
-    def __init__(self, resource, client, max_requests, whitelisted_clients=[], expire=None, redis_pool=REDIS_POOL):
+    def __init__(self, resource, client, max_requests, ignored_clients=None, expire=None, redis_pool=REDIS_POOL):
         """
         Class initialization method checks if the Rate Limit algorithm is
         actually supported by the installed Redis version and sets some
         useful properties.
+
         If Rate Limit is not supported, it raises an Exception.
+
         :param resource: resource identifier string (i.e. ‘user_pictures’)
         :param client: client identifier string (i.e. ‘192.168.0.10’)
         :param max_requests: integer (i.e. ‘10’)
-        :param whitelisted_clients: list of ip addresses (i.e. ['127.0.0.1'])
+        :param ignored_clients: list of ip addresses (i.e. ['127.0.0.1'])
         :param expire: seconds to wait before resetting counters (i.e. ‘60’)
         :param redis_pool: instance of redis.ConnectionPool.
                Default: ConnectionPool(host='127.0.0.1', port=6379, db=0)
         """
         self.client = client
-        self.whitelisted_clients = whitelisted_clients
+        self.ignored_clients = ignored_clients
 
         self._redis = Redis(connection_pool=redis_pool)
         if not self._is_rate_limit_supported():
@@ -98,6 +100,7 @@ class RateLimit(object):
         """
         Returns estimated optimal wait time for subsequent requests.
         If limit has already been reached, return wait time until it gets reset.
+
         :return: float: wait time in seconds
         """
         expire = self._redis.pttl(self._rate_limit_key)
@@ -111,6 +114,7 @@ class RateLimit(object):
     def has_been_reached(self):
         """
         Checks if Rate Limit has been reached.
+
         :return: bool: True if limit has been reached or False otherwise
         """
         return self.get_usage() >= self._max_requests
@@ -118,13 +122,19 @@ class RateLimit(object):
     def increment_usage(self, increment_by=1):
         """
         Calls a LUA script that should increment the resource usage by client.
+
         If the resource limit overflows the maximum number of requests, this
         method raises an Exception.
+
         :param increment_by: The count to increment the rate limiter by.
         This is by default 1, but higher values are provided for more flexible
         rate-limiting schemes.
+
         :return: integer: current usage
         """
+        if self.ignored_clients and self.client in self.ignored_clients:
+            return 0
+
         if increment_by > self._max_requests:
             raise ValueError('increment_by {increment_by} overflows '
                              'max_requests of {max_requests}'
@@ -136,11 +146,8 @@ class RateLimit(object):
                              .format(increment_by=increment_by))
 
         try:
-            if self.client not in self.whitelisted_clients:
-                current_usage = self._redis.evalsha(
-                    INCREMENT_SCRIPT_HASH, 1, self._rate_limit_key, self._expire, increment_by)
-            else:
-                current_usage = 0
+            current_usage = self._redis.evalsha(
+                INCREMENT_SCRIPT_HASH, 1, self._rate_limit_key, self._expire, increment_by)
         except NoScriptError:
             current_usage = self._redis.eval(
                 INCREMENT_SCRIPT, 1, self._rate_limit_key, self._expire, increment_by)
@@ -154,6 +161,7 @@ class RateLimit(object):
         """
         Checks if Rate Limit is supported which can basically be found by
         looking at Redis database version that should be 2.6.0 or greater.
+
         :return: bool
         """
         redis_version = self._redis.info()['redis_version']
@@ -170,19 +178,19 @@ class RateLimit(object):
 
 
 class RateLimiter(object):
-    def __init__(self, resource, max_requests, whitelisted_clients=[], expire=None, redis_pool=REDIS_POOL):
+    def __init__(self, resource, max_requests, ignored_clients=None, expire=None, redis_pool=REDIS_POOL):
         """
         Rate limit factory. Checks if RateLimit is supported when limit is called.
         :param resource: resource identifier string (i.e. ‘user_pictures’)
         :param max_requests: integer (i.e. ‘10’)
-        :param whitelisted_clients: list of ip addresses (i.e. ['127.0.0.1'])
+        :param ignored_clients: list of ip addresses (i.e. ['127.0.0.1'])
         :param expire: seconds to wait before resetting counters (i.e. ‘60’)
         :param redis_pool: instance of redis.ConnectionPool.
                Default: ConnectionPool(host='127.0.0.1', port=6379, db=0)
        """
         self.resource = resource
         self.max_requests = max_requests
-        self.whitelisted_clients = whitelisted_clients
+        self.ignored_clients = ignored_clients
         self.expire = expire
         self.redis_pool = redis_pool
 
@@ -194,7 +202,7 @@ class RateLimiter(object):
             resource=self.resource,
             client=client,
             max_requests=self.max_requests,
-            whitelisted_clients=self.whitelisted_clients,
+            ignored_clients=self.ignored_clients,
             expire=self.expire,
             redis_pool=self.redis_pool,
         )
