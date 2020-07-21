@@ -92,6 +92,7 @@ class RateLimit(object):
         """
         Returns actual resource usage by client. Note that it could be greater
         than the maximum number of requests set.
+
         :return: integer: current usage
         """
         return int(self._redis.get(self._rate_limit_key) or 0)
