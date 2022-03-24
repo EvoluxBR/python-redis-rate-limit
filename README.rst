@@ -1,8 +1,7 @@
 python-redis-rate-limit
 =======================
-
-.. image:: https://travis-ci.org/EvoluxBR/python-redis-rate-limit.svg?branch=master
-    :target: https://travis-ci.org/EvoluxBR/python-redis-rate-limit
+.. image:: https://github.com/EvoluxBR/python-redis-rate-limit/actions/workflows/python-package.yml/badge.svg
+    :target: https://github.com/EvoluxBR/python-redis-rate-limit/actions/workflows/python-package.yml
 
 .. image:: https://img.shields.io/pypi/v/python-redis-rate-limit.svg
     :target: https://pypi.python.org/pypi/python-redis-rate-limit
