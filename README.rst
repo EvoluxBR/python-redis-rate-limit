@@ -52,6 +52,17 @@ Example: 600 requests per minute
     except TooManyRequests:
       return '429 Too Many Requests'
 
+Example: 1 request per 50 milliseconds
+
+.. code-block:: python
+
+    from redis_rate_limit import RateLimit, TooManyRequests, TimeUnit
+    try:
+      with RateLimit(resource='users_list', client='192.168.0.10', max_requests=1, expire=50, time_unit=TimeUnit.MILLISECOND):
+        return '200 OK'
+    except TooManyRequests:
+      return '429 Too Many Requests'
+
 Example: 100 requests per hour
 
 .. code-block:: python
