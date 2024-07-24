@@ -3,7 +3,7 @@
 
 import functools
 from hashlib import sha1
-from distutils.version import StrictVersion
+from packaging.version import Version
 from redis.exceptions import NoScriptError
 from redis import Redis, ConnectionPool
 
@@ -188,8 +188,9 @@ class RateLimit(object):
 
         :return: bool
         """
-        redis_version = self._redis.info()["redis_version"]
-        is_supported = StrictVersion(redis_version) >= StrictVersion("2.6.0")
+        redis_version = self._redis.info()['redis_version']
+        is_supported = Version(redis_version) >= Version('2.6.0')
+
         return bool(is_supported)
 
     def _reset(self):
