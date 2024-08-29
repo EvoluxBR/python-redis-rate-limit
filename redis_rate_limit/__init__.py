@@ -3,7 +3,6 @@
 
 import functools
 from hashlib import sha1
-from packaging.version import Version
 from redis.exceptions import NoScriptError
 from redis import Redis, ConnectionPool
 
@@ -20,15 +19,6 @@ INCREMENT_SCRIPT = b"""
 INCREMENT_SCRIPT_HASH = sha1(INCREMENT_SCRIPT).hexdigest()
 
 REDIS_POOL = ConnectionPool(host='127.0.0.1', port=6379, db=0)
-
-
-class RedisVersionNotSupported(Exception):
-    """
-    Rate Limit depends on Redis’ commands EVALSHA and EVAL which are
-    only available since the version 2.6.0 of the database.
-    """
-    pass
-
 
 class TooManyRequests(Exception):
     """
@@ -59,9 +49,6 @@ class RateLimit(object):
                Default: ConnectionPool(host='127.0.0.1', port=6379, db=0)
         """
         self._redis = Redis(connection_pool=redis_pool)
-        if not self._is_rate_limit_supported():
-            raise RedisVersionNotSupported()
-
         self._rate_limit_key = "rate_limit:{0}_{1}".format(resource, client)
         self._max_requests = max_requests
         self._expire = expire or 1
@@ -132,7 +119,7 @@ class RateLimit(object):
         if increment_by > self._max_requests:
             raise ValueError('increment_by {increment_by} overflows '
                              'max_requests of {max_requests}'
-                             .format(increment_by=increment_by, 
+                             .format(increment_by=increment_by,
                                      max_requests=self._max_requests))
         elif increment_by <= 0:
             raise ValueError('{increment_by} is not a valid increment, '
@@ -150,17 +137,6 @@ class RateLimit(object):
             raise TooManyRequests()
 
         return current_usage
-
-    def _is_rate_limit_supported(self):
-        """
-        Checks if Rate Limit is supported which can basically be found by
-        looking at Redis database version that should be 2.6.0 or greater.
-
-        :return: bool
-        """
-        redis_version = self._redis.info()['redis_version']
-        is_supported = Version(redis_version) >= Version('2.6.0')
-        return bool(is_supported)
 
     def _reset(self):
         """
