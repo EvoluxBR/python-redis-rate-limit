@@ -13,7 +13,7 @@ python-redis-rate-limit
 This lib offers an abstraction of a Rate Limit algorithm implemented on top of
 Redis >= 2.6.0.
 
-Supported Python Versions: 2.7, 3.5+
+Supported Python Versions: 2.7, 3.6+
 
 Example: 10 requests per second
 
