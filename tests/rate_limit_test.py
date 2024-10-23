@@ -41,6 +41,19 @@ class TestRedisRateLimit(unittest.TestCase):
         self.assertEqual(self.rate_limit.get_usage(), 11)
         self.assertEqual(self.rate_limit.has_been_reached(), True)
 
+    def test_ignored_clients(self):
+        """
+        Should not increment counter if client is part of ignored_clients list.
+        """
+        self.rate_limit = RateLimit(resource='test', client='localhost', ignored_clients=['localhost'],
+                                    max_requests=10, expire=2)
+        self.assertEqual(self.rate_limit.get_usage(), 0)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
+        self._make_10_requests()
+        self.assertEqual(self.rate_limit.get_usage(), 0)
+        self.assertEqual(self.rate_limit.has_been_reached(), False)
+
     def test_expire(self):
         """
         Should not raise TooManyRequests Exception when trying to increment for

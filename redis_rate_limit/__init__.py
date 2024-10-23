@@ -33,7 +33,7 @@ class RateLimit(object):
     This class offers an abstraction of a Rate Limit algorithm implemented on
     top of Redis >= 2.6.0.
     """
-    def __init__(self, resource, client, max_requests, expire=None, redis_pool=REDIS_POOL):
+    def __init__(self, resource, client, max_requests, ignored_clients=None, expire=None, redis_pool=REDIS_POOL):
         """
         Class initialization method checks if the Rate Limit algorithm is
         actually supported by the installed Redis version and sets some
@@ -44,10 +44,14 @@ class RateLimit(object):
         :param resource: resource identifier string (i.e. ‘user_pictures’)
         :param client: client identifier string (i.e. ‘192.168.0.10’)
         :param max_requests: integer (i.e. ‘10’)
+        :param ignored_clients: list of ip addresses (i.e. ['127.0.0.1'])
         :param expire: seconds to wait before resetting counters (i.e. ‘60’)
         :param redis_pool: instance of redis.ConnectionPool.
                Default: ConnectionPool(host='127.0.0.1', port=6379, db=0)
         """
+        self.client = client
+        self.ignored_clients = ignored_clients
+
         self._redis = Redis(connection_pool=redis_pool)
         self._rate_limit_key = "rate_limit:{0}_{1}".format(resource, client)
         self._max_requests = max_requests
@@ -116,6 +120,9 @@ class RateLimit(object):
 
         :return: integer: current usage
         """
+        if self.ignored_clients and self.client in self.ignored_clients:
+            return 0
+
         if increment_by > self._max_requests:
             raise ValueError('increment_by {increment_by} overflows '
                              'max_requests of {max_requests}'
@@ -148,17 +155,19 @@ class RateLimit(object):
 
 
 class RateLimiter(object):
-    def __init__(self, resource, max_requests, expire=None, redis_pool=REDIS_POOL):
+    def __init__(self, resource, max_requests, ignored_clients=None, expire=None, redis_pool=REDIS_POOL):
         """
         Rate limit factory. Checks if RateLimit is supported when limit is called.
         :param resource: resource identifier string (i.e. ‘user_pictures’)
         :param max_requests: integer (i.e. ‘10’)
+        :param ignored_clients: list of ip addresses (i.e. ['127.0.0.1'])
         :param expire: seconds to wait before resetting counters (i.e. ‘60’)
         :param redis_pool: instance of redis.ConnectionPool.
                Default: ConnectionPool(host='127.0.0.1', port=6379, db=0)
        """
         self.resource = resource
         self.max_requests = max_requests
+        self.ignored_clients = ignored_clients
         self.expire = expire
         self.redis_pool = redis_pool
 
@@ -170,6 +179,7 @@ class RateLimiter(object):
             resource=self.resource,
             client=client,
             max_requests=self.max_requests,
+            ignored_clients=self.ignored_clients,
             expire=self.expire,
             redis_pool=self.redis_pool,
         )
